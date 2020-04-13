@@ -1,6 +1,6 @@
 pub struct SearchResult {
-    title: String,
-    url: String,
+    pub title: String,
+    pub url: String,
 }
 
 pub trait SearchEngine {

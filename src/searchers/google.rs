@@ -21,12 +21,17 @@ impl SearchEngine for Google {
     }
 }
 
-fn extract_result(html: String) {
+fn extract_result(html: String) -> Vec<SearchResult> {
     let document = Html::parse_document(&html);
+
+    let mut results = Vec::new();
 
     let main_div = {
         let selector = Selector::parse(r#"div[id="main"]"#).unwrap();
-        document.select(&selector).next().expect("Could not find main div")
+        document
+            .select(&selector)
+            .next()
+            .expect("Could not find main div")
     };
 
     let links = {
@@ -54,9 +59,22 @@ fn extract_result(html: String) {
         }
 
         let title = child_divs.first().unwrap().inner_html();
+        let url = ungooglify_redirect_url(href).to_owned();
 
-        println!("Found link: {} {:?}", title, href);
+        results.push(SearchResult { title, url });
     }
-    
-    println!("Main div: {:?}", main_div.value());
+
+    results
+}
+
+fn ungooglify_redirect_url(redirect_url: &str) -> &str {
+    let prefix = "/url?q=";
+    let suffix = "&sa=";
+
+    let removed_prefix = redirect_url.splitn(2, prefix);
+    let removed_suffix = removed_prefix.skip(1).next().unwrap().splitn(2, suffix);
+
+    let cleaned = removed_suffix.take(1).next().unwrap();
+
+    cleaned
 }
