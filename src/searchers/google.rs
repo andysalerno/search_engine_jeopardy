@@ -1,6 +1,4 @@
 use crate::search_engine::{SearchEngine, SearchResult};
-use std::collections::HashMap;
-
 use scraper::{Html, Selector};
 
 pub struct Google;
@@ -9,7 +7,7 @@ impl SearchEngine for Google {
     fn search(&self, query: impl AsRef<str>) -> Vec<SearchResult> {
         println!("Searching for: {}", query.as_ref());
         let url = format!(
-            "https://www.google.com/search?q={}&gws_rd=ssl",
+            "https://www.google.com/search?q={} -jeopardy&gws_rd=ssl",
             query.as_ref()
         );
 
