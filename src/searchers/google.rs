@@ -36,7 +36,7 @@ fn extract_result(html: String) -> Vec<SearchResult> {
 
     let links = {
         let selector = Selector::parse("a").unwrap();
-        document.select(&selector).collect::<Vec<_>>()
+        main_div.select(&selector).collect::<Vec<_>>()
     };
 
     for link in links {
@@ -60,6 +60,8 @@ fn extract_result(html: String) -> Vec<SearchResult> {
 
         let title = child_divs.first().unwrap().inner_html();
         let url = ungooglify_redirect_url(href).to_owned();
+
+        println!("title: {} url: {}", &title, &url);
 
         results.push(SearchResult { title, url });
     }
