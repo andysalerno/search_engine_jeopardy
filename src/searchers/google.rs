@@ -5,7 +5,6 @@ pub struct Google;
 
 impl SearchEngine for Google {
     fn search(&self, query: impl AsRef<str>) -> Vec<SearchResult> {
-        println!("Searching for: {}", query.as_ref());
         let url = format!(
             "https://www.google.com/search?q={} -jeopardy&gws_rd=ssl",
             query.as_ref()
@@ -13,9 +12,7 @@ impl SearchEngine for Google {
 
         let resp = reqwest::blocking::get(&url).unwrap().text().unwrap();
 
-        extract_result(resp);
-
-        todo!()
+        extract_result(resp)
     }
 }
 
@@ -58,8 +55,6 @@ fn extract_result(html: String) -> Vec<SearchResult> {
 
         let title = child_divs.first().unwrap().inner_html();
         let url = ungooglify_redirect_url(href).to_owned();
-
-        println!("title: {} url: {}", &title, &url);
 
         results.push(SearchResult { title, url });
     }
