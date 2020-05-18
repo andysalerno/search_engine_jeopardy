@@ -22,8 +22,18 @@ pub(crate) fn sanitize_stopwords(input: &str) -> String {
     filtered_words.collect::<Vec<String>>().join(" ").into()
 }
 
-pub(crate) fn sanitize_characters(input: &str) -> String {
-    input.chars().filter(|c| char::is_ascii_alphanumeric(c)).collect::<String>()
+fn sanitize_characters(text: impl AsRef<str>) -> String {
+    text.as_ref()
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || c.is_whitespace())
+        .collect::<String>()
+
+        // ... sanitize HTML encoding for the single-quote... huge hack, obviously need to handle them all
+        .replace("&#39;", "")
+}
+
+pub(crate) fn sanitize_text(text: impl AsRef<str>) -> String {
+    sanitize_characters(text.as_ref().to_lowercase())
 }
 
 const _STOP_WORDS: [&str; 127] = [

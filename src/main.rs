@@ -38,26 +38,54 @@ fn main() {
             url, &answer.answer
         );
 
-        let site_content = get_url_content(&url);
+        let site_content = if let Ok(sc) = get_url_content(&url) {
+            sc
+        } else {
+            println!("Skipping this question, due to a ssl/tsl issue I haven't fixed yet.");
+            continue;
+        };
 
         if site_content.contains(&answer.question) {
             println!("\tSite contains the exact question... suspicious.");
             continue;
         }
 
-        if let Some(result_line) = test_site_for_answer(&site_content, &answer.answer) {
+        if let Some((matching_line, matching_offset)) = test_site_for_answer(&site_content, &answer.answer) {
             println!("\tCorrect! Answer is: {}", &answer.answer);
-            println!("\tEngine said:\n\t\t{}", result_line);
+
+            let start = if matching_offset > 20 {
+                matching_offset - 20
+            } else {
+                0
+            };
+
+            let stop = if matching_line.len() - matching_offset > 20 {
+                matching_offset + 20
+            } else {
+                matching_line.len()
+            };
+
+            println!("\tEngine said:\n\t\t{}", &matching_line[start..stop]);
         } else {
+            // println!("Didn't see answer anywhere in response text:\n{}", site_content);
             println!("\tWrong! Answer is: {}", &answer.answer);
         }
     }
 }
 
-fn get_url_content(url: &str) -> String {
-    reqwest::blocking::get(url).unwrap().text().unwrap()
+fn get_url_content(url: &str) -> Result<String, ()> {
+    reqwest::blocking::get(url)
+        .map_err(|e| ())?
+        .text()
+        .map_err(|e| ())
 }
 
-fn test_site_for_answer<'a>(site_content: &'a str, answer: &str) -> Option<&'a str> {
-    site_content.lines().filter(|l| l.contains(answer)).next()
+fn test_site_for_answer<'a>(site_content: &'a str, answer: &str) -> Option<(String, usize)> {
+    let answer_sanitized = stopword_sanitizer::sanitize_text(answer);
+
+    site_content
+        .lines()
+        .map(|l| stopword_sanitizer::sanitize_text(l))
+        .filter_map(|l| l.find(&answer_sanitized).map(|offset| (l, offset)))
+        .next()
 }
