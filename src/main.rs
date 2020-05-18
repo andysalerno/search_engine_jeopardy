@@ -1,6 +1,7 @@
 mod jeopardy_answer;
 mod search_engine;
 mod searchers;
+mod stopword_sanitizer;
 
 use jeopardy_answer::Answer;
 use search_engine::SearchEngine;
@@ -11,51 +12,46 @@ use std::path::Path;
 const JEOPARDY_ANSWERS_PATH: &str = "/home/andy/Desktop/JEOPARDY_QUESTIONS1.json";
 
 fn main() {
-    // let answers = jeopardy_answer::from_file(Path::new(JEOPARDY_ANSWERS_PATH));
+    let answers = jeopardy_answer::from_file(Path::new(JEOPARDY_ANSWERS_PATH));
     // let search = Google;
-    let search = Bing;
+    let search = Google;
 
-    let search_result = search.search("puppy love");
+    for answer in answers.into_iter().take(10) {
+        println!();
+        println!();
 
-    search_result
-        .into_iter()
-        .take(3)
-        .for_each(|url| println!("{}", url.url));
+        println!("Category: {}", &answer.category);
+        println!("Prize: {}", &answer.value.unwrap_or("<none>".into()));
+        println!("The answer is: {}", &answer.question);
 
-    // for answer in answers.into_iter().take(10) {
-    //     println!();
-    //     println!();
+        let x = &answer.question;
+        let query_str = stopword_sanitizer::sanitize_stopwords(x);
+        println!("Sanitized a to be:\na: {}\nb: {}", x, query_str);
+        let search_result = search.search(x);
 
-    //     println!("Category: {}", &answer.category);
-    //     println!("Prize: {}", &answer.value.unwrap_or("<none>".into()));
-    //     println!("The answer is: {}", &answer.question);
+        let url = &search_result.first().expect("No search result").url;
 
-    // let x = &answer.question;
-    // let search_result = search.search(x);
+        println!("{}", url);
 
-    // let url = &search_result.first().expect("No search result").url;
+        println!(
+            "Checking first result.\n\turl: {}\n\tanswer: {}",
+            url, &answer.answer
+        );
 
-    // println!("{}", url);
+        let site_content = get_url_content(&url);
 
-    // println!(
-    //     "Checking first result.\n\turl: {}\n\tanswer: {}",
-    //     url, &answer.answer
-    // );
+        if site_content.contains(&answer.question) {
+            println!("\tSite contains the exact question... suspicious.");
+            continue;
+        }
 
-    // let site_content = get_url_content(&url);
-
-    // if site_content.contains(&answer.question) {
-    //     println!("\tSite contains the exact question... suspicious.");
-    //     continue;
-    // }
-
-    // if let Some(result_line) = test_site_for_answer(&site_content, &answer.answer) {
-    //     println!("\tCorrect! Answer is: {}", &answer.answer);
-    //     println!("\tEngine said:\n\t\t{}", result_line);
-    // } else {
-    //     println!("\tWrong! Answer is: {}", &answer.answer);
-    // }
-    // }
+        if let Some(result_line) = test_site_for_answer(&site_content, &answer.answer) {
+            println!("\tCorrect! Answer is: {}", &answer.answer);
+            println!("\tEngine said:\n\t\t{}", result_line);
+        } else {
+            println!("\tWrong! Answer is: {}", &answer.answer);
+        }
+    }
 }
 
 fn get_url_content(url: &str) -> String {

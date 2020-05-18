@@ -5,7 +5,10 @@ pub struct Bing;
 
 impl SearchEngine for Bing {
     fn search(&self, query: impl AsRef<str>) -> Vec<SearchResult> {
-        let url = format!("https://www.bing.com/search?q={} NOT dog", query.as_ref());
+        let url = format!(
+            "https://www.bing.com/search?q={} NOT jeopardy",
+            query.as_ref()
+        );
 
         let resp = reqwest::blocking::get(&url).unwrap().text().unwrap();
 
@@ -32,10 +35,14 @@ fn extract_result(html: String) -> Vec<SearchResult> {
     };
 
     for link in links {
-        let href = link.value().attr("href").unwrap();
+        let href = link
+            .value()
+            .attr("href")
+            .expect("Encountered a link tag <a ...> without the 'href' attribute.");
 
         let url = href.to_string();
 
+        // Filter out ads, self-indulgent cross-linking, etc
         if !url.starts_with("http") || url.contains("bing.com") {
             continue;
         }
