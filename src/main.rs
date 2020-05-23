@@ -1,7 +1,7 @@
 mod jeopardy_answer;
 mod search_engine;
 mod searchers;
-mod stopword_sanitizer;
+mod text_sanitizer;
 
 use jeopardy_answer::Answer;
 use search_engine::SearchEngine;
@@ -25,24 +25,27 @@ fn main() {
         println!("The answer is: {}", &answer.question);
 
         let x = &answer.question;
-        let query_str = stopword_sanitizer::sanitize_stopwords(x);
+        let query_str = text_sanitizer::remove_stopwords(x);
         println!("Sanitized a to be:\na: {}\nb: {}", x, query_str);
         let search_result = search.search(x);
 
         let url = &search_result.first().expect("No search result").url;
 
+        let answer_sanitized = text_sanitizer::remove_stopwords(&answer.answer);
+
         println!("{}", url);
 
         println!(
             "Checking first result.\n\turl: {}\n\tanswer: {}",
-            url, &answer.answer
+            url, answer_sanitized
         );
 
-        let site_content = if let Ok(sc) = get_url_content(&url) {
-            sc
-        } else {
-            println!("Skipping this question, due to a ssl/tsl issue I haven't fixed yet.");
-            continue;
+        let site_content = match get_url_content(&url) {
+            Ok(c) => c,
+            Err(_) => {
+                println!("Skipping this question, due to a ssl/tsl issue I haven't fixed yet.");
+                continue;
+            }
         };
 
         if site_content.contains(&answer.question) {
@@ -50,7 +53,9 @@ fn main() {
             continue;
         }
 
-        if let Some((matching_line, matching_offset)) = test_site_for_answer(&site_content, &answer.answer) {
+        if let Some((matching_line, matching_offset)) =
+            test_site_for_answer(&site_content, &answer_sanitized)
+        {
             println!("\tCorrect! Answer is: {}", &answer.answer);
 
             let start = if matching_offset > 20 {
@@ -65,10 +70,12 @@ fn main() {
                 matching_line.len()
             };
 
-            println!("\tEngine said:\n\t\t{}", &matching_line[start..stop]);
+            println!("\tEngine said:\n\t\t...{}...", &matching_line[start..stop]);
         } else {
-            // println!("Didn't see answer anywhere in response text:\n{}", site_content);
-            println!("\tWrong! Answer is: {}", &answer.answer);
+            println!(
+                "\tWrong! Answer is: {}",
+                text_sanitizer::sanitize_text(answer.answer)
+            );
         }
     }
 }
@@ -80,12 +87,10 @@ fn get_url_content(url: &str) -> Result<String, ()> {
         .map_err(|e| ())
 }
 
-fn test_site_for_answer<'a>(site_content: &'a str, answer: &str) -> Option<(String, usize)> {
-    let answer_sanitized = stopword_sanitizer::sanitize_text(answer);
-
+fn test_site_for_answer(site_content: &str, answer: &str) -> Option<(String, usize)> {
     site_content
         .lines()
-        .map(|l| stopword_sanitizer::sanitize_text(l))
-        .filter_map(|l| l.find(&answer_sanitized).map(|offset| (l, offset)))
+        .map(|l| text_sanitizer::sanitize_text(l))
+        .filter_map(|l| l.find(answer).map(|offset| (l, offset)))
         .next()
 }
